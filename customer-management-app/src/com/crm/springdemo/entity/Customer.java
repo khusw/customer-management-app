@@ -6,6 +6,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.validation.constraints.Email;
 
 @Entity
 @Table(name="customer")
@@ -23,6 +24,7 @@ public class Customer {
 	private String lastName;
 	
 	@Column(name="email")
+	@Email(message="You must enter valid email")
 	private String email;
 	
 	public Customer() {}
