@@ -4,7 +4,6 @@ import java.util.List;
 
 import javax.validation.Valid;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -23,13 +22,16 @@ import com.crm.springdemo.util.SortUtils;
 @RequestMapping("/customer")
 public class CustomerController {
 	
-	@Autowired
-	private CustomerService customerService;
-	
+	private final CustomerService customerService;
+
+	public CustomerController(CustomerService customerService) {
+		this.customerService = customerService;
+	}
+
 	@GetMapping("/list")
 	public String listCustomers(Model model, @RequestParam(required=false) String sort) {
 		
-		List<Customer> customers = null;
+		List<Customer> customers;
 		
 		if (sort != null) {
 			int sortField = Integer.parseInt(sort);

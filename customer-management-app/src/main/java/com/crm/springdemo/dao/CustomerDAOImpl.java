@@ -5,7 +5,6 @@ import java.util.List;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
 import org.hibernate.query.Query;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.crm.springdemo.entity.Customer;
@@ -14,40 +13,39 @@ import com.crm.springdemo.util.SortUtils;
 @Repository
 public class CustomerDAOImpl implements CustomerDAO {
 
-	@Autowired
-	private SessionFactory sessionFactory; 
-	
+	private final SessionFactory factory;
+
+	public CustomerDAOImpl(SessionFactory factory) {
+		this.factory = factory;
+	}
+
 	@Override
 	public List<Customer> getCustomers() {
 		
-		Session session = sessionFactory.getCurrentSession();
+		Session session = factory.getCurrentSession();
 		
 		Query<Customer> query = session.createQuery("from Customer order by lastName", Customer.class);
 		
-		List<Customer> customers = query.getResultList();
-		
-		return customers;
+		return query.getResultList();
 	}
 
 	@Override
 	public void saveCustomer(Customer customer) {
-		Session session = sessionFactory.getCurrentSession();
+		Session session = factory.getCurrentSession();
 		
 		session.saveOrUpdate(customer);
 	}
 
 	@Override
 	public Customer getCustomer(int id) {
-		Session session = sessionFactory.getCurrentSession();
-		
-		Customer customer = session.get(Customer.class, id);
-		
-		return customer;
+		Session session = factory.getCurrentSession();
+
+		return session.get(Customer.class, id);
 	}
 
 	@Override
 	public void deleteCustomer(int id) {
-		Session session = sessionFactory.getCurrentSession();
+		Session session = factory.getCurrentSession();
 		
 		Query query = session.createQuery("delete from Customer where id=:customerId");
 		
@@ -58,9 +56,9 @@ public class CustomerDAOImpl implements CustomerDAO {
 
 	@Override
 	public List<Customer> searchCustomers(String searchName) {
-		Session session = sessionFactory.getCurrentSession();
+		Session session = factory.getCurrentSession();
 		
-		Query query = null;
+		Query query;
 		
 		if (searchName != null && searchName.trim().length() > 0) {
 			query = session.createQuery("from Customer where lower(firstName) like :name or lower(lastName) like :name", Customer.class);
@@ -69,14 +67,12 @@ public class CustomerDAOImpl implements CustomerDAO {
 			query = session.createQuery("from Customer", Customer.class);
 		}
 		
-		List<Customer> customers = query.getResultList();
-		
-		return customers;
+		return query.getResultList();
 	}
 
 	@Override
 	public List<Customer> getCustomers(int sortField) {
-		Session session = sessionFactory.getCurrentSession();
+		Session session = factory.getCurrentSession();
 		
 		String fieldName = null;
 		
@@ -90,18 +86,13 @@ public class CustomerDAOImpl implements CustomerDAO {
 			case SortUtils.EMAIL:
 				fieldName = "email";
 				break;
-			default:
-				fieldName = "lastName";
-				break;
 		}
 		
 		String queryString = "from Customer order by " + fieldName;
 		
 		Query<Customer> query = session.createQuery(queryString, Customer.class);
 		
-		List<Customer> customers = query.getResultList();
-		
-		return customers;
+		return query.getResultList();
 	}
 
 }

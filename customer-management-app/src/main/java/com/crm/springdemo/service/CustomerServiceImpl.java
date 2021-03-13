@@ -4,7 +4,6 @@ import java.util.List;
 
 import javax.transaction.Transactional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.crm.springdemo.dao.CustomerDAO;
@@ -13,9 +12,12 @@ import com.crm.springdemo.entity.Customer;
 @Service
 public class CustomerServiceImpl implements CustomerService {
 	
-	@Autowired
-	private CustomerDAO customerDAO;
-	
+	private final CustomerDAO customerDAO;
+
+	public CustomerServiceImpl(CustomerDAO customerDAO) {
+		this.customerDAO = customerDAO;
+	}
+
 	@Override
 	@Transactional
 	public List<Customer> getCustomers() {
