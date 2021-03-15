@@ -13,6 +13,8 @@ public class CRMUser {
     @Size(min = 1, message = "is required")
     private String password;
 
+    private String formRole;
+
     public CRMUser() {}
 
     public String getUserName() {
@@ -29,5 +31,13 @@ public class CRMUser {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getFormRole() {
+        return formRole;
+    }
+
+    public void setFormRole(String formRole) {
+        this.formRole = formRole;
     }
 }
