@@ -1,13 +1,17 @@
 package com.crm.springdemo.controller;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
+import javax.annotation.PostConstruct;
 import javax.validation.Valid;
 
 import org.springframework.beans.propertyeditors.StringTrimmerEditor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,6 +42,17 @@ public class RegistrationController {
         this.userDetailsManager = userDetailsManager;
     }
 
+    private Map<String, String> roles;
+
+    @PostConstruct
+    protected void loadRoles() {
+        roles = new LinkedHashMap<String, String>();
+
+        roles.put("ROLE_EMPLOYEE", "Employee");
+        roles.put("ROLE_MANAGER", "Manager");
+        roles.put("ROLE_ADMIN", "Admin");
+    }
+
     @InitBinder
     public void initBinder(WebDataBinder dataBinder) {
 
@@ -47,9 +62,10 @@ public class RegistrationController {
     }
 
     @GetMapping("/showRegistrationForm")
-    public String showMyLoginPage(Model theModel) {
+    public String showMyLoginPage(Model model) {
 
-        theModel.addAttribute("crmUser", new CRMUser());
+        model.addAttribute("crmUser", new CRMUser());
+        model.addAttribute("roles", roles);
 
         return "registration-form";
 
@@ -57,19 +73,19 @@ public class RegistrationController {
 
     @PostMapping("/processRegistrationForm")
     public String processRegistrationForm(
-            @Valid @ModelAttribute("crmUser") CRMUser theCrmUser,
-            BindingResult theBindingResult,
-            Model theModel) {
+            @Valid @ModelAttribute("crmUser") CRMUser crmUser,
+            BindingResult bindingResult,
+            Model model) {
 
-        String userName = theCrmUser.getUserName();
+        String userName = crmUser.getUserName();
 
         logger.info("Processing registration form for: " + userName);
 
         // form validation
-        if (theBindingResult.hasErrors()) {
+        if (bindingResult.hasErrors()) {
 
-            theModel.addAttribute("crmUser", new CRMUser());
-            theModel.addAttribute("registrationError", "User name/password can not be empty.");
+            model.addAttribute("crmUser", new CRMUser());
+            model.addAttribute("registrationError", "User name/password can not be empty.");
 
             logger.warning("User name/password can not be empty.");
 
@@ -80,8 +96,8 @@ public class RegistrationController {
         boolean userExists = doesUserExist(userName);
 
         if (userExists) {
-            theModel.addAttribute("crmUser", new CRMUser());
-            theModel.addAttribute("registrationError", "User name already exists.");
+            model.addAttribute("crmUser", new CRMUser());
+            model.addAttribute("registrationError", "User name already exists.");
 
             logger.warning("User name already exists.");
 
@@ -89,16 +105,22 @@ public class RegistrationController {
         }
 
         // encrypt the password
-        String encodedPassword = passwordEncoder.encode(theCrmUser.getPassword());
+        String encodedPassword = passwordEncoder.encode(crmUser.getPassword());
 
         // prepend the encoding algorithm id
         encodedPassword = "{bcrypt}" + encodedPassword;
 
-        // give user default role of "employee"
-        List<GrantedAuthority> authorities = AuthorityUtils.createAuthorityList("ROLE_EMPLOYEE");
+        // role authorities
+        List<GrantedAuthority> roleAuthorities = AuthorityUtils.createAuthorityList();
+        roleAuthorities.add(new SimpleGrantedAuthority("ROLE_EMPLOYEE"));
 
-        // create user object (from Spring Security framework)
-        User tempUser = new User(userName, encodedPassword, authorities);
+        String formRole = crmUser.getFormRole();
+
+        if (!formRole.equals("ROLE_EMPLOYEE")) {
+            roleAuthorities.add(new SimpleGrantedAuthority(formRole));
+        }
+
+        User tempUser = new User(userName, encodedPassword, roleAuthorities);
 
         // save user in the database
         userDetailsManager.createUser(tempUser);
