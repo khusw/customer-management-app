@@ -2,11 +2,11 @@ package com.crm.springdemo.config;
 
 import java.beans.PropertyVetoException;
 import java.util.Properties;
+import java.util.logging.Logger;
 
 import javax.sql.DataSource;
 
 import org.hibernate.SessionFactory;
-import org.jboss.logging.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -28,11 +28,11 @@ import com.mchange.v2.c3p0.ComboPooledDataSource;
 @EnableWebMvc
 @EnableTransactionManagement
 @ComponentScan("com.crm.springdemo")
-@PropertySource("classpath:config.properties")
+@PropertySource({ "classpath:config.properties", "classpath:security-config.properties" })
 public class AppConfig implements WebMvcConfigurer {
-	
+
 	private final Environment env;
-	
+
 	private Logger logger = Logger.getLogger(getClass().getName());
 
 	public AppConfig(Environment env) {
@@ -41,77 +41,112 @@ public class AppConfig implements WebMvcConfigurer {
 
 	@Bean
 	public ViewResolver viewResolver() {
+
 		InternalResourceViewResolver viewResolver = new InternalResourceViewResolver();
-	
+
 		viewResolver.setPrefix("/WEB-INF/view/");
 		viewResolver.setSuffix(".jsp");
-		
+
 		return viewResolver;
 	}
-	
+
 	@Bean
-	public DataSource dataSource() {
-		ComboPooledDataSource dataSource = new ComboPooledDataSource();
-		
+	public DataSource myDataSource() {
+
+		ComboPooledDataSource myDataSource = new ComboPooledDataSource();
+
 		try {
-			dataSource.setDriverClass("com.mysql.jdbc.Driver");
-		} catch (PropertyVetoException e) {
-			throw new RuntimeException(e);
+			myDataSource.setDriverClass("com.mysql.jdbc.Driver");
+		}
+		catch (PropertyVetoException exc) {
+			throw new RuntimeException(exc);
 		}
 
-		logger.info("jdbc.driver = " + env.getProperty("jdbc.driver"));
-		logger.info("jdbc.url = " + env.getProperty("jdbc.url"));
-		logger.info("jdbc.user = " + env.getProperty("jdbc.user"));
-		
-		dataSource.setJdbcUrl(env.getProperty("jdbc.url"));
-		dataSource.setUser(env.getProperty("jdbc.user"));
-		dataSource.setPassword(env.getProperty("jdbc.password"));
-		
-		dataSource.setInitialPoolSize(getIntProperty("connection.pool.initialPoolSize"));
-		dataSource.setMinPoolSize(getIntProperty("connection.pool.minPoolSize"));
-		dataSource.setMaxPoolSize(getIntProperty("connection.pool.maxPoolSize"));
-		dataSource.setMaxIdleTime(getIntProperty("connection.pool.maxIdleTime"));
-		
-		return dataSource;
+		logger.info("jdbc.url =" + env.getProperty("jdbc.url"));
+		logger.info("jdbc.user =" + env.getProperty("jdbc.user"));
+
+		myDataSource.setJdbcUrl(env.getProperty("jdbc.url"));
+		myDataSource.setUser(env.getProperty("jdbc.user"));
+		myDataSource.setPassword(env.getProperty("jdbc.password"));
+
+		myDataSource.setInitialPoolSize(getIntProperty("connection.pool.initialPoolSize"));
+		myDataSource.setMinPoolSize(getIntProperty("connection.pool.minPoolSize"));
+		myDataSource.setMaxPoolSize(getIntProperty("connection.pool.maxPoolSize"));
+		myDataSource.setMaxIdleTime(getIntProperty("connection.pool.maxIdleTime"));
+
+		return myDataSource;
 	}
-	
+
 	private Properties getHibernateProperties() {
 		Properties props = new Properties();
-		
+
 		props.setProperty("hibernate.dialect", env.getProperty("hibernate.dialect"));
 		props.setProperty("hibernate.show_sql", env.getProperty("hibernate.show_sql"));
-	
+
 		return props;
 	}
-	
-	private int getIntProperty(String propName) {
-		String propVal = env.getProperty(propName);
-		return Integer.parseInt(propVal);
-	}
-	
+
 	@Bean
-	public LocalSessionFactoryBean sessionFactory() {
+	public DataSource securityDataSource() {
+
+		ComboPooledDataSource securityDataSource = new ComboPooledDataSource();
+
+		try {
+			securityDataSource.setDriverClass(env.getProperty("security.jdbc.driver"));
+		} catch (PropertyVetoException exc) {
+			throw new RuntimeException(exc);
+		}
+
+		logger.info(">>> security.jdbc.url=" + env.getProperty("security.jdbc.url"));
+		logger.info(">>> security.jdbc.user=" + env.getProperty("security.jdbc.user"));
+
+		securityDataSource.setJdbcUrl(env.getProperty("security.jdbc.url"));
+		securityDataSource.setUser(env.getProperty("security.jdbc.user"));
+		securityDataSource.setPassword(env.getProperty("security.jdbc.password"));
+
+		securityDataSource.setInitialPoolSize(getIntProperty("security.connection.pool.initialPoolSize"));
+
+		securityDataSource.setMinPoolSize(getIntProperty("security.connection.pool.minPoolSize"));
+
+		securityDataSource.setMaxPoolSize(getIntProperty("security.connection.pool.maxPoolSize"));
+
+		securityDataSource.setMaxIdleTime(getIntProperty("security.connection.pool.maxIdleTime"));
+
+		return securityDataSource;
+	}
+
+	private int getIntProperty(String propName) {
+
+		String propVal = env.getProperty(propName);
+
+		int intPropVal = Integer.parseInt(propVal);
+
+		return intPropVal;
+	}
+
+	@Bean
+	public LocalSessionFactoryBean sessionFactory(){
 		LocalSessionFactoryBean sessionFactory = new LocalSessionFactoryBean();
-		
-		sessionFactory.setDataSource(dataSource());
-		sessionFactory.setPackagesToScan(env.getProperty("hibernate.pacakgesToScan"));
+
+		sessionFactory.setDataSource(myDataSource());
+		sessionFactory.setPackagesToScan(env.getProperty("hibernate.packagesToScan"));
 		sessionFactory.setHibernateProperties(getHibernateProperties());
-		
+
 		return sessionFactory;
 	}
-	
+
 	@Bean
 	@Autowired
 	public HibernateTransactionManager transactionManager(SessionFactory sessionFactory) {
 		HibernateTransactionManager txManager = new HibernateTransactionManager();
 		txManager.setSessionFactory(sessionFactory);
-		
+
 		return txManager;
 	}
 
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
-		registry.addResourceHandler("/resources/**").addResourceLocations("/resources/");
+		registry.addResourceHandler("/resources/**")
+				.addResourceLocations("/resources/");
 	}
-	
 }
